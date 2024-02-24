@@ -3,3 +3,8 @@ export interface IUser {
   email: string;
   password: string;
 }
+
+export interface IServerResponse<T> {
+  result: T | null;
+  error: string | null;
+}

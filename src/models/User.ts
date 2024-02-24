@@ -1,6 +1,4 @@
-import mongoose from 'mongoose';
-
-import { IUser } from 'src/types';
+import mongoose, { InferSchemaType } from 'mongoose';
 
 export const userSchema = new mongoose.Schema({
   username: {
@@ -21,5 +19,6 @@ export const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
-export type UserDocument = mongoose.Document & IUser;
+export type UserDocument = InferSchemaType<typeof userSchema>;
+export type UserDocumentWithoutPassword = Omit<UserDocument, 'password'>;
 export default User;

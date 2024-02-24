@@ -4,41 +4,68 @@ import { Model } from 'mongoose';
 import validator from 'validator';
 import { hash } from 'bcrypt';
 
-import { IUser } from 'src/types';
-import type { UserDocument } from 'src/models/User';
+import { IServerResponse, IUser } from 'src/types';
+import type { UserDocumentWithoutPassword } from 'src/models/User';
 
 @Injectable()
 export class AuthService {
   constructor(@InjectModel('User') private userModel: Model<IUser>) {}
 
-  async findUserByEmail(email: string) {
+  async findUserByEmail(
+    email: string,
+  ): Promise<IServerResponse<UserDocumentWithoutPassword>> {
     try {
       const user = await this.userModel.findOne({ email });
-      return user;
+
+      if (!user) {
+        return {
+          result: null,
+          error: 'No user found with the given email',
+        };
+      }
+
+      return {
+        result: user,
+        error: null,
+      };
     } catch (err) {
       return {
-        result: 'Error',
-        error: err,
+        result: null,
+        error: 'Something went wrong',
       };
     }
   }
 
-  async findUserByUsername(username: string) {
+  async findUserByUsername(
+    username: string,
+  ): Promise<IServerResponse<UserDocumentWithoutPassword>> {
     try {
       const user = await this.userModel.findOne({ username });
-      return user;
+
+      if (!user) {
+        return {
+          result: null,
+          error: 'No user found with the given username',
+        };
+      }
+
+      return {
+        result: user,
+        error: null,
+      };
     } catch (err) {
       return {
-        result: 'Error',
-        error: err,
+        result: null,
+        error: 'Something went wrong',
       };
     }
   }
 
-  async registerNewUser({ username, email, password }: IUser): Promise<{
-    result: string | UserDocument;
-    error: string | null | unknown;
-  }> {
+  async registerNewUser({
+    username,
+    email,
+    password,
+  }: IUser): Promise<IServerResponse<UserDocumentWithoutPassword>> {
     const isEmailValid = validator.isEmail(email);
     const isUsernameValid = validator.isAlphanumeric(username);
     const isPasswordValid = validator.isStrongPassword(password, {
@@ -51,14 +78,14 @@ export class AuthService {
 
     if (!isEmailValid) {
       return {
-        result: 'Error',
+        result: null,
         error: 'Email is not valid',
       };
     }
 
     if (!isUsernameValid) {
       return {
-        result: 'Error',
+        result: null,
         error:
           'Username is not valid. It should only contain alphabets and numeric characters',
       };
@@ -66,7 +93,7 @@ export class AuthService {
 
     if (!isPasswordValid) {
       return {
-        result: 'Error',
+        result: null,
         error:
           'Password is not valid. It should have at least 8 characters, 1 uppercase, 1 lowercase, 1 number and 1 symbol',
       };
@@ -80,17 +107,19 @@ export class AuthService {
         email,
         password: hashedPassword,
       });
+
       const res = await newUser.save();
-      res.password = ''; // returning a blank string instead of returning the actual password hash
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: userPassword, ...userWithoutPassword } = res.toJSON();
 
       return {
-        result: res,
+        result: userWithoutPassword,
         error: null,
       };
     } catch (err) {
       return {
-        result: 'Error',
-        error: err,
+        result: null,
+        error: 'Something went wrong',
       };
     }
   }
