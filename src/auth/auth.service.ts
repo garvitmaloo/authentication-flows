@@ -2,18 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import validator from 'validator';
-import { hash } from 'bcrypt';
+import { hash, compare } from 'bcrypt';
+import { v4 as uuid } from 'uuid';
 
-import { IServerResponse, IUser } from 'src/types';
-import type { UserDocumentWithoutPassword } from 'src/models/User';
+import { IServerResponse, IUser, IUserLogin } from 'src/types';
+import type {
+  UserDocumentWithoutPassword,
+  UserDocument,
+} from 'src/models/User';
 
 @Injectable()
 export class AuthService {
   constructor(@InjectModel('User') private userModel: Model<IUser>) {}
 
-  async findUserByEmail(
-    email: string,
-  ): Promise<IServerResponse<UserDocumentWithoutPassword>> {
+  async findUserByEmail(email: string): Promise<IServerResponse<UserDocument>> {
     try {
       const user = await this.userModel.findOne({ email });
 
@@ -25,7 +27,7 @@ export class AuthService {
       }
 
       return {
-        result: user,
+        result: user.toObject(),
         error: null,
       };
     } catch (err) {
@@ -38,7 +40,7 @@ export class AuthService {
 
   async findUserByUsername(
     username: string,
-  ): Promise<IServerResponse<UserDocumentWithoutPassword>> {
+  ): Promise<IServerResponse<UserDocument>> {
     try {
       const user = await this.userModel.findOne({ username });
 
@@ -50,7 +52,7 @@ export class AuthService {
       }
 
       return {
-        result: user,
+        result: user.toObject(),
         error: null,
       };
     } catch (err) {
@@ -114,6 +116,50 @@ export class AuthService {
 
       return {
         result: userWithoutPassword,
+        error: null,
+      };
+    } catch (err) {
+      return {
+        result: null,
+        error: 'Something went wrong',
+      };
+    }
+  }
+
+  async loginUser({
+    email,
+    password,
+  }: IUserLogin): Promise<
+    IServerResponse<UserDocumentWithoutPassword & { sessionId?: string }>
+  > {
+    try {
+      const userRecord = await this.findUserByEmail(email);
+
+      if (!userRecord) {
+        return {
+          result: null,
+          error: 'No user found with the given email',
+        };
+      }
+
+      const passwordMatch = await compare(password, userRecord.result.password);
+
+      if (!passwordMatch) {
+        return {
+          result: null,
+          error: 'Incorrect password',
+        };
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: userPassword, ...userDetails } = userRecord.result;
+
+      const sessionId = uuid();
+      // const generatedAt = Date.now();
+      // const expiresIn = 60000;
+
+      return {
+        result: { ...userDetails, sessionId },
         error: null,
       };
     } catch (err) {
