@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import validator from 'validator';
 import { hash, compare } from 'bcrypt';
 import { v4 as uuid } from 'uuid';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 import { IServerResponse, IUser, IUserLogin } from 'src/types';
 import type {
@@ -13,7 +15,10 @@ import type {
 
 @Injectable()
 export class AuthService {
-  constructor(@InjectModel('User') private userModel: Model<IUser>) {}
+  constructor(
+    @InjectModel('User') private userModel: Model<IUser>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   async findUserByEmail(email: string): Promise<IServerResponse<UserDocument>> {
     try {
@@ -155,8 +160,12 @@ export class AuthService {
       const { password: userPassword, ...userDetails } = userRecord.result;
 
       const sessionId = uuid();
-      // const generatedAt = Date.now();
-      // const expiresIn = 60000;
+      const generatedAt = Date.now();
+      const expiresIn = 60000; // 1 minute
+
+      const sessionDetails = { sessionId, generatedAt, expiresIn };
+
+      await this.cacheManager.set(userRecord.result.username, sessionDetails);
 
       return {
         result: { ...userDetails, sessionId },

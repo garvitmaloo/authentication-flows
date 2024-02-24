@@ -35,6 +35,11 @@ export class AuthController {
       sameSite: 'none',
     });
 
+    res.cookie('userId', response.result.username, {
+      httpOnly: true,
+      sameSite: 'none',
+    });
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { sessionId, ...details } = response.result;
 
