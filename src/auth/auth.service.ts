@@ -1,23 +1,22 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import validator from 'validator';
 import { hash, compare } from 'bcrypt';
 import { v4 as uuid } from 'uuid';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 
 import { IServerResponse, IUser, IUserLogin } from 'src/types';
 import type {
   UserDocumentWithoutPassword,
   UserDocument,
 } from 'src/models/User';
+import { AppService } from 'src/app.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel('User') private userModel: Model<IUser>,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private appService: AppService,
   ) {}
 
   async findUserByEmail(email: string): Promise<IServerResponse<UserDocument>> {
@@ -165,7 +164,10 @@ export class AuthService {
 
       const sessionDetails = { sessionId, generatedAt, expiresIn };
 
-      await this.cacheManager.set(userRecord.result.username, sessionDetails);
+      await this.appService.setCache(
+        userRecord.result.username,
+        sessionDetails,
+      );
 
       return {
         result: { ...userDetails, sessionId },
@@ -177,5 +179,45 @@ export class AuthService {
         error: 'Something went wrong',
       };
     }
+  }
+
+  async getTestResource(cookieHeaders: {
+    username: string;
+    sessionId: string;
+  }) {
+    if (!cookieHeaders.username)
+      return {
+        result: null,
+        error: 'Error - User is not logged in',
+      };
+
+    const sessionDetails = await this.appService.getCache(
+      cookieHeaders.username,
+    );
+
+    const isSessionIdValid =
+      sessionDetails?.sessionId === cookieHeaders.sessionId;
+
+    if (!isSessionIdValid) {
+      return {
+        result: null,
+        error: 'Error - Session is invalid',
+      };
+    }
+
+    const currentTimestamp = Date.now();
+    const hasSessionExpired =
+      currentTimestamp > sessionDetails.generatedAt + sessionDetails.expiresIn;
+
+    if (hasSessionExpired)
+      return {
+        result: null,
+        error: 'Error - Your session has expired. Please login again.',
+      };
+
+    return {
+      result: 'Here is the resource you requested.',
+      error: null,
+    };
   }
 }

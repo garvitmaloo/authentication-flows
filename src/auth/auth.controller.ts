@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { Body, Controller, Get, Post, Res, Req } from '@nestjs/common';
+import { Request, Response } from 'express';
 
 import { IUser, IUserLogin } from 'src/types';
 
@@ -35,7 +35,7 @@ export class AuthController {
       sameSite: 'none',
     });
 
-    res.cookie('userId', response.result.username, {
+    res.cookie('username', response.result.username, {
       httpOnly: true,
       sameSite: 'none',
     });
@@ -47,5 +47,20 @@ export class AuthController {
       result: details,
       error: null,
     });
+  }
+
+  @Get('/testRoute')
+  async getTestResource(@Req() req: Request) {
+    const { username, sessionId } = req.cookies;
+
+    if (!username)
+      return {
+        result: null,
+        error: 'Error - You are not logged in',
+      };
+
+    const response = this.authService.getTestResource({ username, sessionId });
+
+    return response;
   }
 }

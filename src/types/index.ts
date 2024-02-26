@@ -13,3 +13,9 @@ export interface IUserLogin {
   email: string;
   password: string;
 }
+
+export interface ISessionDetails {
+  sessionId: string;
+  generatedAt: number;
+  expiresIn: number;
+}
