@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { OauthModule } from './oauth/oauth.module';
 import { GoogleStrategy } from './oauth/utils/google.strategy';
+import { SessionSerializer } from './oauth/utils/session.serializer';
 
 @Module({
   imports: [
@@ -14,6 +15,6 @@ import { GoogleStrategy } from './oauth/utils/google.strategy';
     OauthModule,
   ],
   controllers: [AppController],
-  providers: [AppService, GoogleStrategy],
+  providers: [AppService, GoogleStrategy, SessionSerializer],
 })
 export class AppModule {}
