@@ -7,10 +7,25 @@ import { AuthService } from './auth.service';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
   @Post('login')
-  async handleLogin(@Req() req: Request) {
+  async handleLogin(@Req() req: Request, @Res() res: Response) {
     const { email, password } = req.body;
-    await this.authService.login({ email, password });
-    return 'Logging in';
+
+    const response = await this.authService.login({ email, password });
+
+    if (response.error) return res.status(400).json(response);
+
+    const { token, user } = response.result;
+
+    if (token) {
+      res.cookie('secureToken', token);
+    }
+
+    return res.status(200).json({
+      error: null,
+      result: {
+        user,
+      },
+    });
   }
 
   @Post('signup')
@@ -28,7 +43,7 @@ export class AuthController {
 
     if (token) {
       res.cookie('secureToken', token, {
-        maxAge: 24 * 60 * 60 * 1000,
+        maxAge: 3 * 24 * 60 * 60 * 1000,
       });
     }
 

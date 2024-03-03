@@ -16,7 +16,39 @@ export class AuthService {
     @InjectModel('Token-User') private readonly userModel: Model<UserDocument>,
   ) {}
   async login(loginDetails: UserLoginDetails) {
-    console.log('Details = ', loginDetails);
+    const result = (
+      await this.userModel.findOne({ email: loginDetails.email })
+    ).toObject();
+
+    if (!result)
+      return {
+        error: 'ERROR - No user found with this email',
+        result: null,
+      };
+
+    if (result.password !== loginDetails.password)
+      return {
+        error: 'ERROR - Incorrect password',
+        result: null,
+      };
+
+    const { password: _, ...remainingDetails } = result;
+
+    const secureToken = await jwt.sign(
+      { remainingDetails },
+      process.env.JWT_SECRET_TOKEN,
+      {
+        expiresIn: '3d',
+      },
+    );
+
+    return {
+      error: null,
+      result: {
+        token: secureToken,
+        user: remainingDetails,
+      },
+    };
   }
 
   async signup(
