@@ -8,3 +8,8 @@ export type UserSignupDetails = {
   password: string;
   imageUrl?: string;
 };
+
+export type StandardResponse<T> = {
+  error: string | null;
+  result: T | null;
+};

@@ -1,5 +1,5 @@
-import { Controller, Post, Req } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Post, Req, Res } from '@nestjs/common';
+import { Request, Response } from 'express';
 
 import { AuthService } from './auth.service';
 
@@ -14,10 +14,28 @@ export class AuthController {
   }
 
   @Post('signup')
-  async handleSignup(@Req() req: Request) {
+  async handleSignup(@Req() req: Request, @Res() res: Response) {
     const { email, password, imageUrl } = req.body;
-    await this.authService.signup({ email, password, imageUrl });
-    return 'Signing up';
+    const { error, result } = await this.authService.signup({
+      email,
+      password,
+      imageUrl,
+    });
+
+    if (error) return res.status(401).json({ error, result });
+
+    const { token, ...details } = result;
+
+    if (token) {
+      res.cookie('secureToken', token, {
+        maxAge: 24 * 60 * 60 * 1000,
+      });
+    }
+
+    return res.status(201).json({
+      error: null,
+      result: details,
+    });
   }
 
   @Post('logout')
